@@ -18,10 +18,7 @@ Video Audit AI is an intelligent, end‑to‑end platform that automatically aud
 
 ## 🧱 Architecture Overview
 
-## Architecture
-
 ![Video Audit AI Architecture](assets/videoauditaiarchitecture.png)
-
 
 
 The system is composed of three main layers:
