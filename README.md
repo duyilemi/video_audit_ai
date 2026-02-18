@@ -144,11 +144,9 @@ Follow these steps to provision all required Azure services and obtain the neces
 ## 🚀 Running the Project
 
 ### Install dependencies
-We recommend using `uv` for fast dependency management:
+Use `uv` for fast dependency management:
 ```bash
-uv venv
-
-uv add -r requirements.txt
+uv sync
 ```
 
 ### 1. Index the knowledge base (one‑time)
