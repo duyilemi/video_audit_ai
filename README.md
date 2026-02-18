@@ -18,15 +18,10 @@ Vide Audit AI is an intelligent, end‑to‑end platform that automatically audi
 
 ## 🧱 Architecture Overview
 
-Client (CLI / API) 
-        ↓
-FastAPI endpoint (/audit)
-        ↓
-LangGraph workflow
-   ├── Indexer Node (download → upload → extract)
-   └── Auditor Node (RAG → LLM → strict JSON)
-        ↓
-Structured Compliance Report (session_id, video_id, status, issues, final_report)
+## Architecture
+
+![Brand Guardian AI Architecture](assets/videoauditaiarchitecture.png)
+
 
 
 The system is composed of three main layers:
@@ -222,7 +217,7 @@ While the current implementation demonstrates the core concepts, an enterprise�
 ## 📁 Project Structure
 
 ```
-brand-guardian-ai/
+video-audit-ai/
 ├── backend/
 │   ├── data/                   # PDF rulebooks (for indexing)
 │   ├── scripts/
