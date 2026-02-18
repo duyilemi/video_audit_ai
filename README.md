@@ -18,8 +18,16 @@ Vide Audit AI is an intelligent, end‑to‑end platform that automatically audi
 
 ## 🧱 Architecture Overview
 
-![Architecture Diagram](docs/architecture.png)  
-*(Placeholder – create a diagram using e.g. draw.io and add to `docs/`)*
+Client (CLI / API) 
+        ↓
+FastAPI endpoint (/audit)
+        ↓
+LangGraph workflow
+   ├── Indexer Node (download → upload → extract)
+   └── Auditor Node (RAG → LLM → strict JSON)
+        ↓
+Structured Compliance Report (session_id, video_id, status, issues, final_report)
+
 
 The system is composed of three main layers:
 
@@ -91,7 +99,7 @@ Follow these steps to provision all required Azure services and obtain the neces
 
 ### 6. LangSmith (LLM Tracing)
 - Sign up at [smith.langchain.com](https://smith.langchain.com).
-- Create a project (e.g., `brand-guardian-prod`).
+- Create a project (e.g., `video-audit-ai`).
 - Generate an **API key** in the settings page.
 
 ---
@@ -100,8 +108,8 @@ Follow these steps to provision all required Azure services and obtain the neces
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-org/brand-guardian-ai.git
-   cd brand-guardian-ai
+   git clone https://github.com/duyilemi/video_audit_ai.git
+   cd video_audit_ai
    ```
 
 2. Create a `.env` file in the project root and fill in all values using the template below:
@@ -147,8 +155,8 @@ Follow these steps to provision all required Azure services and obtain the neces
 We recommend using `uv` for fast dependency management:
 ```bash
 uv venv
-source .venv/bin/activate   # or .venv\Scripts\activate on Windows
-uv pip install -r requirements.txt
+
+uv add -r requirements.txt
 ```
 
 ### 1. Index the knowledge base (one‑time)
