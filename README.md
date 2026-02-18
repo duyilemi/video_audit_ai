@@ -1,6 +1,6 @@
 # Video Audit AI – Enterprise Compliance Audit Platform
 
-Vide Audit AI is an intelligent, end‑to‑end platform that automatically audits video content (e.g., YouTube videos) against brand safety and regulatory rules. It combines Azure AI services, a vector knowledge base, and a LangGraph‑powered workflow to detect compliance violations in spoken and on‑screen content.
+Video Audit AI is an intelligent, end‑to‑end platform that automatically audits video content (e.g., YouTube videos) against brand safety and regulatory rules. It combines Azure AI services, a vector knowledge base, and a LangGraph‑powered workflow to detect compliance violations in spoken and on‑screen content.
 
 ---
 
@@ -20,7 +20,7 @@ Vide Audit AI is an intelligent, end‑to‑end platform that automatically audi
 
 ## Architecture
 
-![Brand Guardian AI Architecture](assets/videoauditaiarchitecture.png)
+![Video Audit AI Architecture](assets/videoauditaiarchitecture.png)
 
 
 
