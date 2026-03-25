@@ -21,6 +21,122 @@ Video Audit AI is an intelligent, end‑to‑end platform that automatically aud
 ![Video Audit AI Architecture](assets/videoauditaiarchitecture.png)
 
 
+## Architecture
+
+```mermaid
+graph TB
+    %% ==================== STYLING ====================
+    classDef ingress fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
+    classDef azure fill:#0078d4,stroke:#004578,stroke-width:2px,color:#fff
+    classDef langgraph fill:#1a1a1a,stroke:#ff6b6b,stroke-width:3px,color:#fff
+    classDef datastore fill:#40c057,stroke:#2b8a3e,stroke-width:2px,color:#fff
+    classDef client fill:#fab005,stroke:#e67700,stroke-width:2px,color:#000
+    classDef obs fill:#7950f2,stroke:#5f3dc4,stroke-width:2px,color:#fff
+
+    %% ==================== CLIENT LAYER ====================
+    Client([Client Application<br/>cURL / Postman / UI]):::client -->|POST /audit<br/>{video_url}| FastAPI
+    
+    %% ==================== API LAYER ====================
+    subgraph FastAPI_Gateway ["🚀 FastAPI Gateway (backend/src/api/server.py)"]
+        FastAPI[("FastAPI Server<br/>Brand Guardian AI")]:::client
+        Telemetry[("OpenTelemetry<br/>Instrumentation")]:::obs
+        FastAPI -.->|Auto-instrument| Telemetry
+    end
+    
+    %% ==================== WORKFLOW ORCHESTRATION ====================
+    FastAPI -->|invoke()| LangGraph
+    
+    subgraph LangGraph_Workflow ["⚡ LangGraph State Machine (backend/src/graph/workflow.py)"]
+        direction TB
+        LangGraph[("StateGraph<br/>VideoAuditState")]:::langgraph
+        
+        subgraph Nodes ["Deterministic Nodes"]
+            Indexer["🎬 Node: Indexer<br/>(index_video_node)"]:::langgraph
+            Auditor["🔍 Node: Auditor<br/>(audit_content_node)"]:::langgraph
+        end
+        
+        LangGraph -->|set_entry_point| Indexer
+        Indexer -->|add_edge| Auditor
+        Auditor -->|add_edge| END([END])
+    end
+    
+    %% ==================== VIDEO INGESTION PIPELINE ====================
+    subgraph Video_Ingestion ["📹 Video Ingestion Layer (Azure Video Indexer)"]
+        direction TB
+        YouTubeDL["yt_dlp<br/>YouTube Downloader"]:::ingress
+        VI_Service[("VideoIndexerService<br/>Azure VI Client")]:::azure
+        VI_API[("Azure Video Indexer API<br/>Speech-to-Text + OCR")]:::azure
+        
+        YouTubeDL -->|temp_video.mp4| VI_Service
+        VI_Service -->|Upload & Poll| VI_API
+        VI_API -->|Extract| Transcript["📝 Transcript<br/>VTT/JSON"]
+        VI_API -->|Extract| OCR["📄 OCR Text<br/>On-screen Text"]
+        VI_API -->|Extract| Metadata["📊 Metadata<br/>Duration/Resolution"]
+    end
+    
+    Indexer -.->|calls| YouTubeDL
+    Indexer -.->|processes| Transcript
+    Indexer -.->|processes| OCR
+    
+    %% ==================== RAG KNOWLEDGE BASE ====================
+    subgraph RAG_System ["📚 RAG Compliance Knowledge Base"]
+        direction TB
+        PDFs["Source PDFs<br/>FTC Guidelines<br/>YouTube Ad Specs"]:::datastore
+        Chunker[("RecursiveCharacter<br/>TextSplitter<br/>1000/200 overlap")]:::datastore
+        Embeddings["Azure OpenAI<br/>text-embedding-3-small"]:::azure
+        VectorDB[("Azure AI Search<br/>Vector Store<br/>37 Chunks")]:::azure
+        
+        PDFs -->|Load/PyPDFLoader| Chunker
+        Chunker -->|index_documents| Embeddings
+        Embeddings -->|Vectorize| VectorDB
+    end
+    
+    Auditor -.->|similarity_search<br/>k=3| VectorDB
+    VectorDB -.->|retrieved_rules| Auditor
+    
+    %% ==================== LLM REASONING ====================
+    subgraph LLM_Engine ["🧠 LLM Reasoning Engine"]
+        GPT4["Azure OpenAI<br/>GPT-4o<br/>temperature=0.0"]:::azure
+        Prompt["System Prompt:<br/>Senior Brand Compliance Auditor<br/>+ Strict JSON Schema"]:::langgraph
+    end
+    
+    Auditor -.->|Invoke| GPT4
+    GPT4 -.->|Structured JSON<br/>Output| Auditor
+    
+    %% ==================== OUTPUT ====================
+    Auditor -->|returns| FinalState[("Final State<br/>VideoAuditState")]
+    FinalState -->|AuditResponse| FastAPI
+    FastAPI -->|JSON Report| Client
+    
+    subgraph Response_Structure ["📋 Compliance Report Schema"]
+        direction TB
+        ReportSchema["{<br/>session_id: uuid,<br/>video_id: string,<br/>status: PASS/FAIL,<br/>final_report: markdown,<br/>compliance_results: [<br/>&nbsp;&nbsp;{category, severity,<br/>&nbsp;&nbsp;&nbsp;description}<br/>]<br/>}"]
+    end
+    
+    %% ==================== OBSERVABILITY ====================
+    subgraph Observability ["📡 Full-Stack Observability"]
+        AzureMonitor[("Azure Monitor<br/>Application Insights")]:::obs
+        Logs["Structured Logs<br/>brand-guardian-telemetry"]:::obs
+        Traces["Distributed Traces<br/>Request Latency"]:::obs
+    end
+    
+    Telemetry -.->|configure_azure_monitor| AzureMonitor
+    Indexer -.->|logger.info| Logs
+    Auditor -.->|logger.info| Logs
+    
+    %% ==================== STATE SCHEMA ====================
+    subgraph State_Schema ["🗄️ TypedDict State (backend/src/graph/state.py)"]
+        direction TB
+        StateDef["VideoAuditState:<br/>- video_url: str<br/>- transcript: Optional[str]<br/>- ocr_text: List[str]<br/>- compliance_results: Annotated[List, operator.add]<br/>- final_status: str<br/>- errors: Annotated[List, operator.add]"]
+    end
+    
+    %% Styling links
+    linkStyle 0 stroke:#fab005,stroke-width:3px
+    linkStyle 1 stroke:#ff6b6b,stroke-width:2px
+    linkStyle 6 stroke:#40c057,stroke-width:2px
+    linkStyle 10 stroke:#7950f2,stroke-width:2px
+```
+
 The system is composed of three main layers:
 
 ### 1. **Ingestion & Indexing** (one‑time setup)
