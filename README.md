@@ -55,8 +55,9 @@ graph TB
 PDFs[Compliance PDFs] --> Chunker[Text Splitter]
 Chunker --> Embeddings[Embedding Model]
 Embeddings --> VectorDB[Vector Store]
-Auditor[Auditor Node] -->|Retrieve Rules| VectorDB
-VectorDB --> Auditor
+
+AuditorNode[Auditor Node] --> VectorDB
+VectorDB --> AuditorNode
 ```
 
 ---
@@ -65,9 +66,9 @@ VectorDB --> Auditor
 
 ```mermaid
 graph TB
-Auditor[Auditor Node] --> Prompt[System Prompt]
+AuditorNode[Auditor Node] --> Prompt[System Prompt]
 Prompt --> LLM[GPT-4o]
-LLM -->|Structured JSON Output| Auditor
+LLM --> AuditorNode
 ```
 
 ---
@@ -76,10 +77,11 @@ LLM -->|Structured JSON Output| Auditor
 
 ```mermaid
 graph TB
-FastAPI --> Telemetry[OpenTelemetry]
+FastAPINode[FastAPI Gateway] --> Telemetry[OpenTelemetry]
 Telemetry --> Monitor[Azure Monitor]
-Indexer --> Logs[Structured Logs]
-Auditor --> Logs
+
+IndexerNode[Indexer Node] --> Logs[Structured Logs]
+AuditorNode[Auditor Node] --> Logs
 ```
 
 ---
