@@ -18,126 +18,84 @@ Video Audit AI is an intelligent, end‑to‑end platform that automatically aud
 
 ## 🧱 Architecture Overview
 
-![Video Audit AI Architecture](assets/videoauditaiarchitecture.png)
 
-
-## Architecture
-
-## 🏗️ Architecture
+### 🔹 High-Level System Flow
 
 ```mermaid
 graph TB
-    %% ==================== STYLING ====================
-    classDef ingress fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
-    classDef azure fill:#0078d4,stroke:#004578,stroke-width:2px,color:#fff
-    classDef langgraph fill:#1a1a1a,stroke:#ff6b6b,stroke-width:3px,color:#fff
-    classDef datastore fill:#40c057,stroke:#2b8a3e,stroke-width:2px,color:#fff
-    classDef client fill:#fab005,stroke:#e67700,stroke-width:2px,color:#000
-    classDef obs fill:#7950f2,stroke:#5f3dc4,stroke-width:2px,color:#fff
-
-    %% ==================== CLIENT LAYER ====================
-    Client([Client Application cURL Postman UI]):::client -->|POST audit video_url| FastAPI
-    
-    %% ==================== API LAYER ====================
-    subgraph FastAPI_Gateway [FastAPI Gateway backend/src/api/server.py]
-        FastAPI(FastAPI Server Brand Guardian AI):::client
-        Telemetry(OpenTelemetry Instrumentation):::obs
-        FastAPI -.->|Auto-instrument| Telemetry
-    end
-    
-    %% ==================== WORKFLOW ORCHESTRATION ====================
-    FastAPI -->|invoke| LangGraph
-    
-    subgraph LangGraph_Workflow [LangGraph State Machine backend/src/graph/workflow.py]
-        direction TB
-        LangGraph(StateGraph VideoAuditState):::langgraph
-        
-        subgraph Nodes [Deterministic Nodes]
-            Indexer(Node: Indexer index_video_node):::langgraph
-            Auditor(Node: Auditor audit_content_node):::langgraph
-        end
-        
-        LangGraph -->|set_entry_point| Indexer
-        Indexer -->|add_edge| Auditor
-        Auditor -->|add_edge| END([END])
-    end
-    
-    %% ==================== VIDEO INGESTION PIPELINE ====================
-    subgraph Video_Ingestion [Video Ingestion Layer Azure Video Indexer]
-        direction TB
-        YouTubeDL(yt_dlp YouTube Downloader):::ingress
-        VI_Service(VideoIndexerService Azure VI Client):::azure
-        VI_API(Azure Video Indexer API Speech-to-Text + OCR):::azure
-        
-        YouTubeDL -->|temp_video.mp4| VI_Service
-        VI_Service -->|Upload & Poll| VI_API
-        VI_API -->|Extract| Transcript(Transcript VTT/JSON)
-        VI_API -->|Extract| OCR(OCR Text On-screen Text)
-        VI_API -->|Extract| Metadata(Metadata Duration/Resolution)
-    end
-    
-    Indexer -.->|calls| YouTubeDL
-    Indexer -.->|processes| Transcript
-    Indexer -.->|processes| OCR
-    
-    %% ==================== RAG KNOWLEDGE BASE ====================
-    subgraph RAG_System [RAG Compliance Knowledge Base]
-        direction TB
-        PDFs(Source PDFs FTC Guidelines YouTube Ad Specs):::datastore
-        Chunker(RecursiveCharacter TextSplitter 1000/200 overlap):::datastore
-        Embeddings(Azure OpenAI text-embedding-3-small):::azure
-        VectorDB(Azure AI Search Vector Store 37 Chunks):::azure
-        
-        PDFs -->|Load PyPDFLoader| Chunker
-        Chunker -->|index_documents| Embeddings
-        Embeddings -->|Vectorize| VectorDB
-    end
-    
-    Auditor -.->|similarity_search k=3| VectorDB
-    VectorDB -.->|retrieved_rules| Auditor
-    
-    %% ==================== LLM REASONING ====================
-    subgraph LLM_Engine [LLM Reasoning Engine]
-        GPT4(Azure OpenAI GPT-4o temperature=0.0):::azure
-        Prompt(System Prompt Senior Brand Compliance Auditor + Strict JSON Schema):::langgraph
-    end
-    
-    Auditor -.->|Invoke| GPT4
-    GPT4 -.->|Structured JSON Output| Auditor
-    
-    %% ==================== OUTPUT ====================
-    Auditor -->|returns| FinalState(Final State VideoAuditState)
-    FinalState -->|AuditResponse| FastAPI
-    FastAPI -->|JSON Report| Client
-    
-    subgraph Response_Structure [Compliance Report Schema]
-        direction TB
-        ReportSchema["session_id: uuid, video_id: string, status: PASS/FAIL, final_report: markdown, compliance_results: list"]
-    end
-    
-    %% ==================== OBSERVABILITY ====================
-    subgraph Observability [Full-Stack Observability]
-        AzureMonitor(Azure Monitor Application Insights):::obs
-        Logs(Structured Logs brand-guardian-telemetry):::obs
-        Traces(Distributed Traces Request Latency):::obs
-    end
-    
-    Telemetry -.->|configure_azure_monitor| AzureMonitor
-    Indexer -.->|logger.info| Logs
-    Auditor -.->|logger.info| Logs
-    
-    %% ==================== STATE SCHEMA ====================
-    subgraph State_Schema [TypedDict State backend/src/graph/state.py]
-        direction TB
-        StateDef["VideoAuditState: video_url, transcript, ocr_text, compliance_results, final_status, errors"]
-    end
-    
-    %% Styling links
-    linkStyle 0 stroke:#fab005,stroke-width:3px
-    linkStyle 1 stroke:#ff6b6b,stroke-width:2px
-    linkStyle 6 stroke:#40c057,stroke-width:2px
-    linkStyle 10 stroke:#7950f2,stroke-width:2px
+Client[Client Application] -->|POST video_url| FastAPI[FastAPI Gateway]
+FastAPI --> LangGraph[LangGraph Workflow]
+LangGraph --> Indexer[Indexer Node]
+Indexer --> Auditor[Auditor Node]
+Auditor --> FinalState[Final State]
+FinalState --> FastAPI
+FastAPI -->|JSON Report| Client
 ```
+
+---
+
+### 🔹 Video Ingestion Pipeline
+
+```mermaid
+graph TB
+Indexer[Indexer Node] --> Downloader[yt-dlp Downloader]
+Downloader --> VideoFile[temp_video.mp4]
+VideoFile --> VideoIndexer[Azure Video Indexer API]
+VideoIndexer --> Transcript[Transcript]
+VideoIndexer --> OCR[OCR Text]
+VideoIndexer --> Metadata[Metadata]
+```
+
+---
+
+### 🔹 RAG + Compliance Knowledge Base
+
+```mermaid
+graph TB
+PDFs[Compliance PDFs] --> Chunker[Text Splitter]
+Chunker --> Embeddings[Embedding Model]
+Embeddings --> VectorDB[Vector Store]
+Auditor[Auditor Node] -->|Retrieve Rules| VectorDB
+VectorDB --> Auditor
+```
+
+---
+
+### 🔹 LLM Reasoning Engine
+
+```mermaid
+graph TB
+Auditor[Auditor Node] --> Prompt[System Prompt]
+Prompt --> LLM[GPT-4o]
+LLM -->|Structured JSON Output| Auditor
+```
+
+---
+
+### 🔹 Observability
+
+```mermaid
+graph TB
+FastAPI --> Telemetry[OpenTelemetry]
+Telemetry --> Monitor[Azure Monitor]
+Indexer --> Logs[Structured Logs]
+Auditor --> Logs
+```
+
+---
+
+## 📦 Response Schema
+
+```json
+{
+  "session_id": "uuid",
+  "video_id": "string",
+  "status": "PASS | FAIL",
+  "final_report": "markdown",
+  "compliance_results": []
+}
+```
+
 
 The system is composed of three main layers:
 
