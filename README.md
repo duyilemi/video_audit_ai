@@ -23,6 +23,8 @@ Video Audit AI is an intelligent, end‑to‑end platform that automatically aud
 
 ## Architecture
 
+## 🏗️ Architecture
+
 ```mermaid
 graph TB
     %% ==================== STYLING ====================
@@ -34,25 +36,25 @@ graph TB
     classDef obs fill:#7950f2,stroke:#5f3dc4,stroke-width:2px,color:#fff
 
     %% ==================== CLIENT LAYER ====================
-    Client([Client Application<br/>cURL / Postman / UI]):::client -->|POST /audit<br/>{video_url}| FastAPI
+    Client([Client Application cURL Postman UI]):::client -->|POST audit video_url| FastAPI
     
     %% ==================== API LAYER ====================
-    subgraph FastAPI_Gateway ["🚀 FastAPI Gateway (backend/src/api/server.py)"]
-        FastAPI[("FastAPI Server<br/>Brand Guardian AI")]:::client
-        Telemetry[("OpenTelemetry<br/>Instrumentation")]:::obs
+    subgraph FastAPI_Gateway [FastAPI Gateway backend/src/api/server.py]
+        FastAPI(FastAPI Server Brand Guardian AI):::client
+        Telemetry(OpenTelemetry Instrumentation):::obs
         FastAPI -.->|Auto-instrument| Telemetry
     end
     
     %% ==================== WORKFLOW ORCHESTRATION ====================
-    FastAPI -->|invoke()| LangGraph
+    FastAPI -->|invoke| LangGraph
     
-    subgraph LangGraph_Workflow ["⚡ LangGraph State Machine (backend/src/graph/workflow.py)"]
+    subgraph LangGraph_Workflow [LangGraph State Machine backend/src/graph/workflow.py]
         direction TB
-        LangGraph[("StateGraph<br/>VideoAuditState")]:::langgraph
+        LangGraph(StateGraph VideoAuditState):::langgraph
         
-        subgraph Nodes ["Deterministic Nodes"]
-            Indexer["🎬 Node: Indexer<br/>(index_video_node)"]:::langgraph
-            Auditor["🔍 Node: Auditor<br/>(audit_content_node)"]:::langgraph
+        subgraph Nodes [Deterministic Nodes]
+            Indexer(Node: Indexer index_video_node):::langgraph
+            Auditor(Node: Auditor audit_content_node):::langgraph
         end
         
         LangGraph -->|set_entry_point| Indexer
@@ -61,17 +63,17 @@ graph TB
     end
     
     %% ==================== VIDEO INGESTION PIPELINE ====================
-    subgraph Video_Ingestion ["📹 Video Ingestion Layer (Azure Video Indexer)"]
+    subgraph Video_Ingestion [Video Ingestion Layer Azure Video Indexer]
         direction TB
-        YouTubeDL["yt_dlp<br/>YouTube Downloader"]:::ingress
-        VI_Service[("VideoIndexerService<br/>Azure VI Client")]:::azure
-        VI_API[("Azure Video Indexer API<br/>Speech-to-Text + OCR")]:::azure
+        YouTubeDL(yt_dlp YouTube Downloader):::ingress
+        VI_Service(VideoIndexerService Azure VI Client):::azure
+        VI_API(Azure Video Indexer API Speech-to-Text + OCR):::azure
         
         YouTubeDL -->|temp_video.mp4| VI_Service
         VI_Service -->|Upload & Poll| VI_API
-        VI_API -->|Extract| Transcript["📝 Transcript<br/>VTT/JSON"]
-        VI_API -->|Extract| OCR["📄 OCR Text<br/>On-screen Text"]
-        VI_API -->|Extract| Metadata["📊 Metadata<br/>Duration/Resolution"]
+        VI_API -->|Extract| Transcript(Transcript VTT/JSON)
+        VI_API -->|Extract| OCR(OCR Text On-screen Text)
+        VI_API -->|Extract| Metadata(Metadata Duration/Resolution)
     end
     
     Indexer -.->|calls| YouTubeDL
@@ -79,45 +81,45 @@ graph TB
     Indexer -.->|processes| OCR
     
     %% ==================== RAG KNOWLEDGE BASE ====================
-    subgraph RAG_System ["📚 RAG Compliance Knowledge Base"]
+    subgraph RAG_System [RAG Compliance Knowledge Base]
         direction TB
-        PDFs["Source PDFs<br/>FTC Guidelines<br/>YouTube Ad Specs"]:::datastore
-        Chunker[("RecursiveCharacter<br/>TextSplitter<br/>1000/200 overlap")]:::datastore
-        Embeddings["Azure OpenAI<br/>text-embedding-3-small"]:::azure
-        VectorDB[("Azure AI Search<br/>Vector Store<br/>37 Chunks")]:::azure
+        PDFs(Source PDFs FTC Guidelines YouTube Ad Specs):::datastore
+        Chunker(RecursiveCharacter TextSplitter 1000/200 overlap):::datastore
+        Embeddings(Azure OpenAI text-embedding-3-small):::azure
+        VectorDB(Azure AI Search Vector Store 37 Chunks):::azure
         
-        PDFs -->|Load/PyPDFLoader| Chunker
+        PDFs -->|Load PyPDFLoader| Chunker
         Chunker -->|index_documents| Embeddings
         Embeddings -->|Vectorize| VectorDB
     end
     
-    Auditor -.->|similarity_search<br/>k=3| VectorDB
+    Auditor -.->|similarity_search k=3| VectorDB
     VectorDB -.->|retrieved_rules| Auditor
     
     %% ==================== LLM REASONING ====================
-    subgraph LLM_Engine ["🧠 LLM Reasoning Engine"]
-        GPT4["Azure OpenAI<br/>GPT-4o<br/>temperature=0.0"]:::azure
-        Prompt["System Prompt:<br/>Senior Brand Compliance Auditor<br/>+ Strict JSON Schema"]:::langgraph
+    subgraph LLM_Engine [LLM Reasoning Engine]
+        GPT4(Azure OpenAI GPT-4o temperature=0.0):::azure
+        Prompt(System Prompt Senior Brand Compliance Auditor + Strict JSON Schema):::langgraph
     end
     
     Auditor -.->|Invoke| GPT4
-    GPT4 -.->|Structured JSON<br/>Output| Auditor
+    GPT4 -.->|Structured JSON Output| Auditor
     
     %% ==================== OUTPUT ====================
-    Auditor -->|returns| FinalState[("Final State<br/>VideoAuditState")]
+    Auditor -->|returns| FinalState(Final State VideoAuditState)
     FinalState -->|AuditResponse| FastAPI
     FastAPI -->|JSON Report| Client
     
-    subgraph Response_Structure ["📋 Compliance Report Schema"]
+    subgraph Response_Structure [Compliance Report Schema]
         direction TB
-        ReportSchema["{<br/>session_id: uuid,<br/>video_id: string,<br/>status: PASS/FAIL,<br/>final_report: markdown,<br/>compliance_results: [<br/>&nbsp;&nbsp;{category, severity,<br/>&nbsp;&nbsp;&nbsp;description}<br/>]<br/>}"]
+        ReportSchema["session_id: uuid, video_id: string, status: PASS/FAIL, final_report: markdown, compliance_results: list"]
     end
     
     %% ==================== OBSERVABILITY ====================
-    subgraph Observability ["📡 Full-Stack Observability"]
-        AzureMonitor[("Azure Monitor<br/>Application Insights")]:::obs
-        Logs["Structured Logs<br/>brand-guardian-telemetry"]:::obs
-        Traces["Distributed Traces<br/>Request Latency"]:::obs
+    subgraph Observability [Full-Stack Observability]
+        AzureMonitor(Azure Monitor Application Insights):::obs
+        Logs(Structured Logs brand-guardian-telemetry):::obs
+        Traces(Distributed Traces Request Latency):::obs
     end
     
     Telemetry -.->|configure_azure_monitor| AzureMonitor
@@ -125,9 +127,9 @@ graph TB
     Auditor -.->|logger.info| Logs
     
     %% ==================== STATE SCHEMA ====================
-    subgraph State_Schema ["🗄️ TypedDict State (backend/src/graph/state.py)"]
+    subgraph State_Schema [TypedDict State backend/src/graph/state.py]
         direction TB
-        StateDef["VideoAuditState:<br/>- video_url: str<br/>- transcript: Optional[str]<br/>- ocr_text: List[str]<br/>- compliance_results: Annotated[List, operator.add]<br/>- final_status: str<br/>- errors: Annotated[List, operator.add]"]
+        StateDef["VideoAuditState: video_url, transcript, ocr_text, compliance_results, final_status, errors"]
     end
     
     %% Styling links
